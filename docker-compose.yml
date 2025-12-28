@@ -1,6 +1,8 @@
 version: "3"
 services:
-  web:
+  client:
+    stdin_open: true
+    tty: true
     build:
       context: ./client
       dockerfile: Dockerfile.dev
@@ -19,6 +21,14 @@ services:
     volumes:
       - /app/node_modules
       - ./server:/app
+    environment:
+      - PGUSER=postgres
+      - PGPASSWORD=postgres_password
+      - PGDATABASE=postgres
+      - PGHOST=postgres
+      - PGPORT=5432
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     command: npm run dev
   worker:
     build:
@@ -27,6 +37,9 @@ services:
     volumes:
       - /app/node_modules
       - ./worker:/app
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     command: npm run dev
   postgres:
     image: postgres:latest
