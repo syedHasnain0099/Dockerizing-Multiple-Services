@@ -19,11 +19,11 @@ const pgClient = new Pool({
   port: keys.pgPort,
 });
 
-pgClient.on('connect', () => {
-  pgClient
-    .query('CREATE TABLE IF NOT EXISTS values (number INT)')
-    .catch((err) => console.log(err));
-});
+pgClient.on('error', () => console.log('Lost PG connection'));
+
+pgClient
+  .query('CREATE TABLE IF NOT EXISTS values (number INT)')
+  .catch((err) => console.log(err));
 
 // Redis Client Setup
 const redis = require('redis');
@@ -41,9 +41,13 @@ app.get('/', (req, res) => {
 });
 
 app.get('/values/all', async (req, res) => {
-  const values = await pgClient.query('SELECT * from values');
-
-  res.send(values.rows);
+  try {
+    const values = await pgClient.query('SELECT * from values');
+    res.send(values.rows);
+  } catch (err) {
+    console.log(err);
+    res.status(500).send([]);
+  }
 });
 
 app.get('/values/current', async (req, res) => {
@@ -61,9 +65,14 @@ app.post('/values', async (req, res) => {
 
   redisClient.hset('values', index, 'Nothing yet!');
   redisPublisher.publish('insert', index);
-  pgClient.query('INSERT INTO values(number) VALUES($1)', [index]);
 
-  res.send({ working: true });
+  try {
+    await pgClient.query('INSERT INTO values(number) VALUES($1)', [index]);
+    res.send({ working: true });
+  } catch (err) {
+    console.log(err);
+    res.status(500).send('Error inserting value');
+  }
 });
 
 app.listen(5000, (err) => {
