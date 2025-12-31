@@ -43,3 +43,30 @@ jobs:
           docker push ${{ secrets.DOCKER_ID }}/multi-nginx
           docker push ${{ secrets.DOCKER_ID }}/multi-server
           docker push ${{ secrets.DOCKER_ID }}/multi-worker
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Create EB deployment bundle (Dockerrun only)
+        run: |
+          test -f Dockerrun.aws.json
+          zip -r deploy.zip Dockerrun.aws.json
+
+          # If you ever add EB config files, uncomment this:
+          # if [ -d .ebextensions ]; then zip -r deploy.zip .ebextensions; fi
+
+      - name: Deploy to Elastic Beanstalk
+        uses: einaregilsson/beanstalk-deploy@v21
+        with:
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY }}
+          aws_secret_key: ${{ secrets.AWS_SECRET_KEY }}
+          application_name: multi-docker
+          environment_name: MultiDocker-env
+          region: us-east-1
+          version_label: multi-docker-${{ github.sha }}
+          deployment_package: deploy.zip
+          wait_for_environment_recovery: true
