@@ -51,10 +51,10 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Create EB deployment bundle (Dockerrun only)
+      - name: Create EB deployment bundle
         run: |
-          test -f Dockerrun.aws.json
-          zip -r deploy.zip Dockerrun.aws.json
+          cp docker-compose-eb.yml docker-compose.yml
+          zip -r deploy.zip docker-compose.yml
 
           # If you ever add EB config files, uncomment this:
           # if [ -d .ebextensions ]; then zip -r deploy.zip .ebextensions; fi

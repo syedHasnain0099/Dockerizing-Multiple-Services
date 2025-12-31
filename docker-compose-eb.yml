@@ -1,0 +1,35 @@
+version: '3'
+services:
+  client:
+    image: syedhasnain0099/multi-client
+    restart: always
+    mem_limit: 128m
+  api:
+    image: syedhasnain0099/multi-server
+    restart: always
+    mem_limit: 128m
+    environment:
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - PGUSER=${PGUSER}
+      - PGHOST=${PGHOST}
+      - PGDATABASE=${PGDATABASE}
+      - PGPASSWORD=${PGPASSWORD}
+      - PGPORT=${PGPORT}
+  worker:
+    image: syedhasnain0099/multi-worker
+    restart: always
+    mem_limit: 128m
+    environment:
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+  nginx:
+    image: syedhasnain0099/multi-nginx
+    restart: always
+    mem_limit: 128m
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+      - client
+
