@@ -43,3 +43,4 @@ jobs:
           docker push ${{ secrets.DOCKER_ID }}/multi-nginx
           docker push ${{ secrets.DOCKER_ID }}/multi-server
           docker push ${{ secrets.DOCKER_ID }}/multi-worker
+
