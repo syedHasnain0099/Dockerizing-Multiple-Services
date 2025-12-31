@@ -1,0 +1,1136 @@
+Directory structure:
+└── complex/
+    ├── docker-compose.yml
+    ├── Dockerrun.aws.json
+    ├── client/
+    │   ├── README.md
+    │   ├── Dockerfile
+    │   ├── Dockerfile.dev
+    │   ├── package.json
+    │   ├── nginx/
+    │   │   └── default.conf
+    │   ├── public/
+    │   │   ├── index.html
+    │   │   ├── manifest.json
+    │   │   └── robots.txt
+    │   └── src/
+    │       ├── App.css
+    │       ├── App.js
+    │       ├── App.test.js
+    │       ├── Fib.js
+    │       ├── index.css
+    │       ├── index.js
+    │       ├── OtherPage.js
+    │       ├── serviceWorker.js
+    │       └── setupTests.js
+    ├── nginx/
+    │   ├── default.conf
+    │   ├── Dockerfile
+    │   └── Dockerfile.dev
+    ├── server/
+    │   ├── Dockerfile
+    │   ├── Dockerfile.dev
+    │   ├── index.js
+    │   ├── keys.js
+    │   └── package.json
+    ├── worker/
+    │   ├── Dockerfile
+    │   ├── Dockerfile.dev
+    │   ├── index.js
+    │   ├── keys.js
+    │   └── package.json
+    └── .github/
+        └── workflows/
+            └── deploy.yml
+
+================================================
+FILE: docker-compose.yml
+================================================
+version: "3"
+services:
+  postgres:
+    image: "postgres:latest"
+    environment:
+      - POSTGRES_PASSWORD=postgres_password
+  redis:
+    image: "redis:latest"
+  nginx:
+    restart: always
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./nginx
+    ports:
+      - "3050:80"
+    depends_on:
+      - api
+      - client
+  api:
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./server
+    volumes:
+      - /app/node_modules
+      - ./server:/app
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - PGUSER=postgres
+      - PGHOST=postgres
+      - PGDATABASE=postgres
+      - PGPASSWORD=postgres_password
+      - PGPORT=5432
+  client:
+    stdin_open: true
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./client
+    volumes:
+      - /app/node_modules
+      - ./client:/app
+  worker:
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./worker
+    volumes:
+      - /app/node_modules
+      - ./worker:/app
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+
+
+
+================================================
+FILE: Dockerrun.aws.json
+================================================
+{
+  "AWSEBDockerrunVersion": "2",
+  "containerDefinitions": [
+    {
+      "name": "client",
+      "image": "syedhasnain0099/multi-client",
+      "hostname": "client",
+      "essential": false
+    },
+    {
+      "name": "server",
+      "image": "syedhasnain0099/multi-server",
+      "hostname": "api",
+      "essential": false
+    },
+    {
+      "name": "worker",
+      "image": "syedhasnain0099/multi-worker",
+      "hostname": "worker",
+      "essential": false
+    },
+    {
+      "name": "nginx",
+      "image": "syedhasnain0099/multi-nginx",
+      "hostname": "nginx",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 80,
+          "hostPort": 80
+        }
+      ],
+      "links": ["client", "server"]
+    }
+  ]
+}
+
+
+
+================================================
+FILE: client/README.md
+================================================
+This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+
+## Available Scripts
+
+In the project directory, you can run:
+
+### `npm start`
+
+Runs the app in the development mode.<br />
+Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+
+The page will reload if you make edits.<br />
+You will also see any lint errors in the console.
+
+### `npm test`
+
+Launches the test runner in the interactive watch mode.<br />
+See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+
+### `npm run build`
+
+Builds the app for production to the `build` folder.<br />
+It correctly bundles React in production mode and optimizes the build for the best performance.
+
+The build is minified and the filenames include the hashes.<br />
+Your app is ready to be deployed!
+
+See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+
+### `npm run eject`
+
+**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+
+If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+
+Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+
+You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+
+## Learn More
+
+You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+
+To learn React, check out the [React documentation](https://reactjs.org/).
+
+### Code Splitting
+
+This section has moved here: https://facebook.github.io/create-react-app/docs/code-splitting
+
+### Analyzing the Bundle Size
+
+This section has moved here: https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size
+
+### Making a Progressive Web App
+
+This section has moved here: https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app
+
+### Advanced Configuration
+
+This section has moved here: https://facebook.github.io/create-react-app/docs/advanced-configuration
+
+### Deployment
+
+This section has moved here: https://facebook.github.io/create-react-app/docs/deployment
+
+### `npm run build` fails to minify
+
+This section has moved here: https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify
+
+
+
+================================================
+FILE: client/Dockerfile
+================================================
+FROM node:16-alpine AS builder
+
+WORKDIR /app
+
+COPY package.json .
+
+RUN npm install
+
+COPY . .
+
+RUN npm run build
+
+FROM nginx:latest
+
+COPY --from=builder /app/build /usr/share/nginx/html
+
+COPY ./nginx/default.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 3000
+
+
+
+================================================
+FILE: client/Dockerfile.dev
+================================================
+FROM node:18-alpine
+
+WORKDIR /app
+
+COPY package.json .
+
+RUN npm install
+
+COPY . .
+
+ENV NODE_OPTIONS=--openssl-legacy-provider
+
+CMD ["npm", "run", "start"]
+
+
+================================================
+FILE: client/package.json
+================================================
+{
+  "name": "client",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@testing-library/jest-dom": "^4.2.4",
+    "@testing-library/react": "^9.5.0",
+    "@testing-library/user-event": "^7.2.1",
+    "react": "^16.13.1",
+    "react-dom": "^16.13.1",
+    "react-scripts": "3.4.3",
+    "react-router-dom": "4.3.1",
+    "axios": "0.18.0"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": "react-app"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}
+
+
+
+================================================
+FILE: client/nginx/default.conf
+================================================
+server {
+  listen 3000;
+  location / {
+    root /usr/share/nginx/html;
+    index index.html;
+    try_files $uri $uri/ /index.html;
+  }
+}
+
+
+================================================
+FILE: client/public/index.html
+================================================
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta
+      name="description"
+      content="Web site created using create-react-app"
+    />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <!--
+      manifest.json provides metadata used when your web app is installed on a
+      user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
+    -->
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <!--
+      Notice the use of %PUBLIC_URL% in the tags above.
+      It will be replaced with the URL of the `public` folder during the build.
+      Only files inside the `public` folder can be referenced from the HTML.
+
+      Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
+      work correctly both with client-side routing and a non-root public URL.
+      Learn how to configure a non-root public URL by running `npm run build`.
+    -->
+    <title>React App</title>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+    <!--
+      This HTML file is a template.
+      If you open it directly in the browser, you will see an empty page.
+
+      You can add webfonts, meta tags, or analytics to this file.
+      The build step will place the bundled scripts into the <body> tag.
+
+      To begin the development, run `npm start` or `yarn start`.
+      To create a production bundle, use `npm run build` or `yarn build`.
+    -->
+  </body>
+</html>
+
+
+
+================================================
+FILE: client/public/manifest.json
+================================================
+{
+  "short_name": "React App",
+  "name": "Create React App Sample",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "logo192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "logo512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#ffffff"
+}
+
+
+
+================================================
+FILE: client/public/robots.txt
+================================================
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Disallow:
+
+
+
+================================================
+FILE: client/src/App.css
+================================================
+.App {
+  text-align: center;
+}
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
+
+================================================
+FILE: client/src/App.js
+================================================
+import React from 'react';
+import logo from './logo.svg';
+import './App.css';
+import { BrowserRouter as Router, Route, Link } from 'react-router-dom';
+import OtherPage from './OtherPage';
+import Fib from './Fib';
+
+function App() {
+  return (
+    <Router>
+      <div className="App">
+        <header className="App-header">
+          <img src={logo} className="App-logo" alt="logo" />
+          <a
+            className="App-link"
+            href="https://reactjs.org"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Learn React
+          </a>
+          <Link to="/">Home</Link>
+          <Link to="/otherpage">Other Page</Link>
+        </header>
+        <div>
+          <Route exact path="/" component={Fib} />
+          <Route path="/otherpage" component={OtherPage} />
+        </div>
+      </div>
+    </Router>
+  );
+}
+
+export default App;
+
+
+
+================================================
+FILE: client/src/App.test.js
+================================================
+import React from "react";
+import { render } from "@testing-library/react";
+import App from "./App";
+
+test("renders learn react link", () => {});
+
+
+
+================================================
+FILE: client/src/Fib.js
+================================================
+import React, { Component } from 'react';
+import axios from 'axios';
+
+class Fib extends Component {
+  state = {
+    seenIndexes: [],
+    values: {},
+    index: '',
+  };
+
+  componentDidMount() {
+    this.fetchValues();
+    this.fetchIndexes();
+  }
+
+  async fetchValues() {
+    const values = await axios.get('/api/values/current');
+    this.setState({ values: values.data });
+  }
+
+  async fetchIndexes() {
+    const seenIndexes = await axios.get('/api/values/all');
+    this.setState({
+      seenIndexes: seenIndexes.data,
+    });
+  }
+
+  handleSubmit = async (event) => {
+    event.preventDefault();
+
+    await axios.post('/api/values', {
+      index: this.state.index,
+    });
+    this.setState({ index: '' });
+  };
+
+  renderSeenIndexes() {
+    return this.state.seenIndexes.map(({ number }) => number).join(', ');
+  }
+
+  renderValues() {
+    const entries = [];
+
+    for (let key in this.state.values) {
+      entries.push(
+        <div key={key}>
+          For index {key} I calculated {this.state.values[key]}
+        </div>
+      );
+    }
+
+    return entries;
+  }
+
+  render() {
+    return (
+      <div>
+        <form onSubmit={this.handleSubmit}>
+          <label>Enter your index:</label>
+          <input
+            value={this.state.index}
+            onChange={(event) => this.setState({ index: event.target.value })}
+          />
+          <button>Submit</button>
+        </form>
+
+        <h3>Indexes I have seen:</h3>
+        {this.renderSeenIndexes()}
+
+        <h3>Calculated Values:</h3>
+        {this.renderValues()}
+      </div>
+    );
+  }
+}
+
+export default Fib;
+
+
+
+================================================
+FILE: client/src/index.css
+================================================
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+
+
+================================================
+FILE: client/src/index.js
+================================================
+import React from 'react';
+import ReactDOM from 'react-dom';
+import './index.css';
+import App from './App';
+import * as serviceWorker from './serviceWorker';
+
+ReactDOM.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+  document.getElementById('root')
+);
+
+// If you want your app to work offline and load faster, you can change
+// unregister() to register() below. Note this comes with some pitfalls.
+// Learn more about service workers: https://bit.ly/CRA-PWA
+serviceWorker.unregister();
+
+
+
+================================================
+FILE: client/src/OtherPage.js
+================================================
+import React from 'react';
+import { Link } from 'react-router-dom';
+
+export default () => {
+  return (
+    <div>
+      Im some other page!
+      <Link to="/">Go back home</Link>
+    </div>
+  );
+};
+
+
+
+================================================
+FILE: client/src/serviceWorker.js
+================================================
+// This optional code is used to register a service worker.
+// register() is not called by default.
+
+// This lets the app load faster on subsequent visits in production, and gives
+// it offline capabilities. However, it also means that developers (and users)
+// will only see deployed updates on subsequent visits to a page, after all the
+// existing tabs open on the page have been closed, since previously cached
+// resources are updated in the background.
+
+// To learn more about the benefits of this model and instructions on how to
+// opt-in, read https://bit.ly/CRA-PWA
+
+const isLocalhost = Boolean(
+  window.location.hostname === 'localhost' ||
+    // [::1] is the IPv6 localhost address.
+    window.location.hostname === '[::1]' ||
+    // 127.0.0.0/8 are considered localhost for IPv4.
+    window.location.hostname.match(
+      /^127(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}$/
+    )
+);
+
+export function register(config) {
+  if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
+    // The URL constructor is available in all browsers that support SW.
+    const publicUrl = new URL(process.env.PUBLIC_URL, window.location.href);
+    if (publicUrl.origin !== window.location.origin) {
+      // Our service worker won't work if PUBLIC_URL is on a different origin
+      // from what our page is served on. This might happen if a CDN is used to
+      // serve assets; see https://github.com/facebook/create-react-app/issues/2374
+      return;
+    }
+
+    window.addEventListener('load', () => {
+      const swUrl = `${process.env.PUBLIC_URL}/service-worker.js`;
+
+      if (isLocalhost) {
+        // This is running on localhost. Let's check if a service worker still exists or not.
+        checkValidServiceWorker(swUrl, config);
+
+        // Add some additional logging to localhost, pointing developers to the
+        // service worker/PWA documentation.
+        navigator.serviceWorker.ready.then(() => {
+          console.log(
+            'This web app is being served cache-first by a service ' +
+              'worker. To learn more, visit https://bit.ly/CRA-PWA'
+          );
+        });
+      } else {
+        // Is not localhost. Just register service worker
+        registerValidSW(swUrl, config);
+      }
+    });
+  }
+}
+
+function registerValidSW(swUrl, config) {
+  navigator.serviceWorker
+    .register(swUrl)
+    .then(registration => {
+      registration.onupdatefound = () => {
+        const installingWorker = registration.installing;
+        if (installingWorker == null) {
+          return;
+        }
+        installingWorker.onstatechange = () => {
+          if (installingWorker.state === 'installed') {
+            if (navigator.serviceWorker.controller) {
+              // At this point, the updated precached content has been fetched,
+              // but the previous service worker will still serve the older
+              // content until all client tabs are closed.
+              console.log(
+                'New content is available and will be used when all ' +
+                  'tabs for this page are closed. See https://bit.ly/CRA-PWA.'
+              );
+
+              // Execute callback
+              if (config && config.onUpdate) {
+                config.onUpdate(registration);
+              }
+            } else {
+              // At this point, everything has been precached.
+              // It's the perfect time to display a
+              // "Content is cached for offline use." message.
+              console.log('Content is cached for offline use.');
+
+              // Execute callback
+              if (config && config.onSuccess) {
+                config.onSuccess(registration);
+              }
+            }
+          }
+        };
+      };
+    })
+    .catch(error => {
+      console.error('Error during service worker registration:', error);
+    });
+}
+
+function checkValidServiceWorker(swUrl, config) {
+  // Check if the service worker can be found. If it can't reload the page.
+  fetch(swUrl, {
+    headers: { 'Service-Worker': 'script' },
+  })
+    .then(response => {
+      // Ensure service worker exists, and that we really are getting a JS file.
+      const contentType = response.headers.get('content-type');
+      if (
+        response.status === 404 ||
+        (contentType != null && contentType.indexOf('javascript') === -1)
+      ) {
+        // No service worker found. Probably a different app. Reload the page.
+        navigator.serviceWorker.ready.then(registration => {
+          registration.unregister().then(() => {
+            window.location.reload();
+          });
+        });
+      } else {
+        // Service worker found. Proceed as normal.
+        registerValidSW(swUrl, config);
+      }
+    })
+    .catch(() => {
+      console.log(
+        'No internet connection found. App is running in offline mode.'
+      );
+    });
+}
+
+export function unregister() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.ready
+      .then(registration => {
+        registration.unregister();
+      })
+      .catch(error => {
+        console.error(error.message);
+      });
+  }
+}
+
+
+
+================================================
+FILE: client/src/setupTests.js
+================================================
+// jest-dom adds custom jest matchers for asserting on DOM nodes.
+// allows you to do things like:
+// expect(element).toHaveTextContent(/react/i)
+// learn more: https://github.com/testing-library/jest-dom
+import '@testing-library/jest-dom/extend-expect';
+
+
+
+================================================
+FILE: nginx/default.conf
+================================================
+upstream client {
+  server client:3000;
+}
+
+upstream api {
+  server api:5000;
+}
+
+server {
+  listen 80;
+  location / {
+    proxy_pass http://client;
+  }
+
+  location /api/ {
+    rewrite /api/(.*) /$1 break;
+    proxy_pass http://api;
+  }
+
+  location /sockjs-node/ {
+    proxy_pass http://client;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+  }
+}
+
+
+
+
+================================================
+FILE: nginx/Dockerfile
+================================================
+FROM nginx:latest
+
+COPY ./default.conf /etc/nginx/conf.d/default.conf
+
+
+================================================
+FILE: nginx/Dockerfile.dev
+================================================
+FROM nginx:latest
+
+COPY ./default.conf /etc/nginx/conf.d/default.conf
+
+
+================================================
+FILE: server/Dockerfile
+================================================
+FROM node:16-alpine
+
+WORKDIR /app
+
+COPY package.json .
+
+RUN npm install
+
+COPY . .
+
+CMD ["npm", "run", "start"]
+
+
+================================================
+FILE: server/Dockerfile.dev
+================================================
+FROM node:18-alpine
+
+WORKDIR /app
+
+COPY package.json .
+
+RUN npm install
+
+COPY . .
+
+CMD ["npm", "run", "dev"]
+
+
+================================================
+FILE: server/index.js
+================================================
+const keys = require('./keys');
+
+// Express App Setup
+const express = require('express');
+const bodyParser = require('body-parser');
+const cors = require('cors');
+
+const app = express();
+app.use(cors());
+app.use(bodyParser.json());
+
+// Postgres Client Setup
+const { Pool } = require('pg');
+const pgClient = new Pool({
+  user: keys.pgUser,
+  host: keys.pgHost,
+  database: keys.pgDatabase,
+  password: keys.pgPassword,
+  port: keys.pgPort,
+});
+
+pgClient.on('error', () => console.log('Lost PG connection'));
+
+pgClient
+  .query('CREATE TABLE IF NOT EXISTS values (number INT)')
+  .catch((err) => console.log(err));
+
+// Redis Client Setup
+const redis = require('redis');
+const redisClient = redis.createClient({
+  host: keys.redisHost,
+  port: keys.redisPort,
+  retry_strategy: () => 1000,
+});
+const redisPublisher = redisClient.duplicate();
+
+// Express route handlers
+
+app.get('/', (req, res) => {
+  res.send('Hi');
+});
+
+app.get('/values/all', async (req, res) => {
+  try {
+    const values = await pgClient.query('SELECT * from values');
+    res.send(values.rows);
+  } catch (err) {
+    console.log(err);
+    res.status(500).send([]);
+  }
+});
+
+app.get('/values/current', async (req, res) => {
+  redisClient.hgetall('values', (err, values) => {
+    res.send(values);
+  });
+});
+
+app.post('/values', async (req, res) => {
+  const index = req.body.index;
+
+  if (parseInt(index) > 40) {
+    return res.status(422).send('Index too high');
+  }
+
+  redisClient.hset('values', index, 'Nothing yet!');
+  redisPublisher.publish('insert', index);
+
+  try {
+    await pgClient.query('INSERT INTO values(number) VALUES($1)', [index]);
+    res.send({ working: true });
+  } catch (err) {
+    console.log(err);
+    res.status(500).send('Error inserting value');
+  }
+});
+
+app.listen(5000, (err) => {
+  console.log('Listening');
+});
+
+
+
+================================================
+FILE: server/keys.js
+================================================
+module.exports = {
+  redisHost: process.env.REDIS_HOST,
+  redisPort: process.env.REDIS_PORT,
+  pgUser: process.env.PGUSER,
+  pgHost: process.env.PGHOST,
+  pgDatabase: process.env.PGDATABASE,
+  pgPassword: process.env.PGPASSWORD,
+  pgPort: process.env.PGPORT,
+};
+
+
+
+================================================
+FILE: server/package.json
+================================================
+{
+  "dependencies": {
+    "express": "4.16.3",
+    "pg": "8.0.3",
+    "redis": "2.8.0",
+    "cors": "2.8.4",
+    "nodemon": "1.18.3",
+    "body-parser": "*"
+  },
+  "scripts": {
+    "dev": "nodemon",
+    "start": "node index.js"
+  }
+}
+
+
+
+================================================
+FILE: worker/Dockerfile
+================================================
+FROM node:16-alpine
+
+WORKDIR /app
+
+COPY package.json .
+
+RUN npm install
+
+COPY . .
+
+CMD ["npm", "run", "start"]
+
+
+================================================
+FILE: worker/Dockerfile.dev
+================================================
+FROM node:16-alpine
+
+WORKDIR /app
+
+COPY package.json .
+
+RUN npm install
+
+COPY . .
+
+CMD ["npm", "run", "dev"]
+
+
+================================================
+FILE: worker/index.js
+================================================
+const keys = require('./keys');
+const redis = require('redis');
+
+const redisClient = redis.createClient({
+  host: keys.redisHost,
+  port: keys.redisPort,
+  retry_strategy: () => 1000,
+});
+const sub = redisClient.duplicate();
+
+function fib(index) {
+  if (index < 2) return 1;
+  return fib(index - 1) + fib(index - 2);
+}
+
+sub.on('message', (channel, message) => {
+  redisClient.hset('values', message, fib(parseInt(message)));
+});
+sub.subscribe('insert');
+
+
+
+================================================
+FILE: worker/keys.js
+================================================
+module.exports = {
+  redisHost: process.env.REDIS_HOST,
+  redisPort: process.env.REDIS_PORT,
+};
+
+
+
+================================================
+FILE: worker/package.json
+================================================
+{
+  "dependencies": {
+    "nodemon": "1.18.3",
+    "redis": "2.8.0"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon"
+  }
+}
+
+
+
+================================================
+FILE: .github/workflows/deploy.yml
+================================================
+name: Deploy Multi-Docker
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build Test Image
+        run: docker build -t syedhasnain0099/react-test -f ./client/Dockerfile.dev ./client
+      - name: Run Tests
+        run: docker run -e CI=true syedhasnain0099/react-test npm test
+
+  build-and-push:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_ID }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build Prod Images
+        run: |
+          docker build -t ${{ secrets.DOCKER_ID }}/multi-client ./client
+          docker build -t ${{ secrets.DOCKER_ID }}/multi-nginx ./nginx
+          docker build -t ${{ secrets.DOCKER_ID }}/multi-server ./server
+          docker build -t ${{ secrets.DOCKER_ID }}/multi-worker ./worker
+
+      - name: Push Prod Images
+        run: |
+          docker push ${{ secrets.DOCKER_ID }}/multi-client
+          docker push ${{ secrets.DOCKER_ID }}/multi-nginx
+          docker push ${{ secrets.DOCKER_ID }}/multi-server
+          docker push ${{ secrets.DOCKER_ID }}/multi-worker
+
+
+
